@@ -108,7 +108,25 @@ server.get("/messages", async (req,res)=>{
   try{
     const messagesCollection = db.collection("messages");
     let listMessages = await messagesCollection.find({}).toArray();
-    res.send(listMessages);
+    listMessages = listMessages.filter(date => {
+      if(date.type === "message" || date.from === req.headers.user || date.to === req.headers.user){
+        return true;
+      } else{
+        return false;
+      }
+    });
+    if(limit){
+      listMessages = listMessages.filter((date, index)=>{
+        if(index > (listMessages.length-(parseInt(limit)+1))){
+          return true;
+        }
+        return false;
+      });
+      res.send(listMessages);
+    }else{
+      res.send(listMessages);
+    }
+    
   }catch(err){
     res.status(500).send(err);
   }
