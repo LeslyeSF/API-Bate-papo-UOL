@@ -5,6 +5,7 @@ import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
 import dayjs from "dayjs";
+import { stripHtml } from "string-strip-html";
 
 dotenv.config();
 
@@ -27,6 +28,7 @@ const participantSchema = joi.object({
 
 server.post("/participants", async (req,res)=>{
   const user = {...req.body, lastStatus: Date.now()};
+  user.name = stripHtml(user.name).result.trim();
 
   const validation = participantSchema.validate(user, { abortEarly: true });
 
@@ -90,6 +92,9 @@ server.post("/messages", async (req,res)=>{
     if (validation.error) {
       res.status(422).send(validation.error.details[0].message);
     } 
+    message.from = stripHtml(message.from).result.trim();
+    message.to = stripHtml(message.to).result.trim();
+    message.text = stripHtml(message.text).result.trim();
     const messagesCollection = db.collection("messages");
     await messagesCollection.insertOne(message);
     
@@ -193,6 +198,9 @@ server.put("/messages/:idMessage", async (req,res)=>{
     if (validation.error) {
       res.status(422).send(validation.error.details[0].message);
     } 
+    message.from = stripHtml(message.from).result.trim();
+    message.to = stripHtml(message.to).result.trim();
+    message.text = stripHtml(message.text).result.trim();
     const messagesCollection = db.collection("messages");
     const messageFound = await messagesCollection.findOne({_id: new ObjectId(id)});
     if(messageFound){
