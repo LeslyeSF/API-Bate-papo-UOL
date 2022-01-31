@@ -64,11 +64,8 @@ server.get("/participants", async (req,res)=>{
     const listParticipants = await participantsCollection.find({}).toArray();
 
     res.send(listParticipants);
-    console.log("deu certo");
   }catch(err){
     res.status(500).send(err);
-    console.log("falhou ge part");
-    console.log(err);
   }
 });
 
@@ -151,7 +148,6 @@ server.post("/status",async (req,res)=>{
     }
   }catch(err){
     res.status(500).send(err);
-    console.log(err);
   }
 });
 
@@ -173,7 +169,47 @@ server.delete("/messages/:idMessage", async(req, res)=>{
     }
   }catch(err){
     res.status(500).send(err);
-    console.log(err);
+  }
+});
+
+server.put("/messages/:idMessage", async (req,res)=>{
+  const id = req.params.idMessage;
+  const message = {
+    from: req.headers.user,
+    ...req.body,
+    time: dayjs().format("HH:mm:ss")
+  };
+  try{
+    let participants = await db.collection("participants").find({}).toArray();
+    participants = participants.map((date)=>{return date.name});
+    const messageSchema = joi.object({
+      from: joi.string().valid(...participants).required(),
+      to:joi.string().min(1).required(),
+      text:joi.string().min(1).required(),
+      type:joi.string().valid("private_message", "message").required(),
+      time: joi.required()
+    });
+    const validation = messageSchema.validate(message, { abortEarly: true });
+    if (validation.error) {
+      res.status(422).send(validation.error.details[0].message);
+    } 
+    const messagesCollection = db.collection("messages");
+    const messageFound = await messagesCollection.findOne({_id: new ObjectId(id)});
+    if(messageFound){
+      if(messageFound.from === message.from){
+        await messagesCollection.updateOne({
+          _id: new ObjectId(id)
+        },{$set: message});
+        res.sendStatus(200);
+      } else{
+        res.sendStatus(401);
+      }
+    }else{
+      res.sendStatus(404);
+    }
+
+  }catch(err){
+    res.status(500).send(err);
   }
 });
 
