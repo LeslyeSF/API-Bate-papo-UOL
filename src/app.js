@@ -9,7 +9,7 @@ dotenv.config();
 
 const server = express();
 const mongoClient = new MongoClient(process.env.MONGO_URI);
-let db;
+let db, userValidation="";
 mongoClient.connect(()=>{
   db = mongoClient.db("Bate-papo-UOL");
 });
@@ -21,13 +21,7 @@ const participantSchema = joi.object({
   name: joi.string().required(),
   lastStatus: joi.number()
 });
-const messageSchema = joi.object({
-  from: joi.string(),
-  to:joi.string(),
-  text:joi.string(),
-  type:joi.string(),
-  time:joi.string()
-});
+
 
 
 server.post("/participants", async (req,res)=>{
@@ -85,25 +79,41 @@ server.post("/messages", async (req,res)=>{
   };
 
   try{
+    let participants = await db.collection("participants").find({}).toArray();
+    participants = participants.map((date)=>{return date.name});
+    const messageSchema = joi.object({
+      from: joi.string().valid(...participants).required(),
+      to:joi.string().min(1).required(),
+      text:joi.string().min(1).required(),
+      type:joi.string().valid("private_message", "message").required(),
+      time: joi.required()
+    });
+    const validation = messageSchema.validate(message, { abortEarly: true });
+    if (validation.error) {
+      res.status(422).send(validation.error.details[0].message);
+    } 
     const messagesCollection = db.collection("messages");
     await messagesCollection.insertOne(message);
+    
 
-    res.status(201).send(message);
+    res.sendStatus(201);
   } catch (err){
     res.status(500).send(err);
   }
-//FALTA A VALIDACAO
+  
 });
 
 server.get("/messages", async (req,res)=>{
+  const limit = req.query.limit;
   try{
     const messagesCollection = db.collection("messages");
-    const listMessages = await messagesCollection.find({}).toArray();
-
+    let listMessages = await messagesCollection.find({}).toArray();
     res.send(listMessages);
   }catch(err){
     res.status(500).send(err);
   }
+  
+  
 });
 
 server.post("/status",async (req,res)=>{
