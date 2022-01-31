@@ -107,7 +107,22 @@ server.get("/messages", async (req,res)=>{
 });
 
 server.post("/status",async (req,res)=>{
-  
+  const user = req.headers.user;
+  try{
+    const participantsCollection = db.collection("participants");
+    const participant = await participantsCollection.findOne({name: user});
+    if(participant){
+      await participantsCollection.updateOne({
+        _id: participant._id
+      },{$set: { lastStatus: Date.now()}});
+      res.sendStatus(200);
+    } else{
+      res.sendStatus(404);
+    }
+  }catch(err){
+    res.status(500).send(err);
+    console.log(err);
+  }
 });
 
 server.listen(5000, ()=>{
