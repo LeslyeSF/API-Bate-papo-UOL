@@ -109,7 +109,8 @@ server.get("/messages", async (req,res)=>{
     const messagesCollection = db.collection("messages");
     let listMessages = await messagesCollection.find({}).toArray();
     listMessages = listMessages.filter(date => {
-      if(date.type === "message" || date.from === req.headers.user || date.to === req.headers.user){
+      if(date.type === "message" || date.from === req.headers.user || 
+      date.to === req.headers.user || date.type === "status"){
         return true;
       } else{
         return false;
@@ -156,6 +157,33 @@ server.post("/status",async (req,res)=>{
 server.listen(5000, ()=>{
   console.log("Running app in http://localhost:5000");
 });
-
+updateUsers();
+function updateUsers(){
+  setInterval(async ()=>{
+    try{
+      const participantsCollection = db.collection("participants");
+      let participants = await participantsCollection.find({lastStatus: {$lte: (Date.now()-10000)}}).toArray();
+      if(participants.length > 0){
+        participants = participants.map((date)=>{
+          const message = {
+            from: date.name, 
+            to: 'Todos', 
+            text: 'sai da sala...', 
+            type: 'status', 
+            time: dayjs().format("HH:mm:ss")
+          };
+          return message;
+        });
+        await participantsCollection.deleteMany({lastStatus: {$lte: (Date.now()-10000)}});
+        const messagesCollection = db.collection("messages");
+        await messagesCollection.insertMany([...participants]);
+      } 
+      
+    }catch(err){
+      console.log(err);
+    }
+    
+  }, 5000);
+}
 
 
