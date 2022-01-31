@@ -78,11 +78,32 @@ server.get("/participants", async (req,res)=>{
 });
 
 server.post("/messages", async (req,res)=>{
-  
+  const message = {
+    from: req.headers.user,
+    ...req.body,
+    time: dayjs().format("HH:mm:ss")
+  };
+
+  try{
+    const messagesCollection = db.collection("messages");
+    await messagesCollection.insertOne(message);
+
+    res.status(201).send(message);
+  } catch (err){
+    res.status(500).send(err);
+  }
+//FALTA A VALIDACAO
 });
 
 server.get("/messages", async (req,res)=>{
-  
+  try{
+    const messagesCollection = db.collection("messages");
+    const listMessages = await messagesCollection.find({}).toArray();
+
+    res.send(listMessages);
+  }catch(err){
+    res.status(500).send(err);
+  }
 });
 
 server.post("/status",async (req,res)=>{
