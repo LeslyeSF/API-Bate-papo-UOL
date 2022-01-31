@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import { ObjectId } from "mongodb";
 import { MongoClient } from "mongodb";
 import dotenv from "dotenv";
 import joi from "joi";
@@ -146,6 +147,28 @@ server.post("/status",async (req,res)=>{
       },{$set: { lastStatus: Date.now()}});
       res.sendStatus(200);
     } else{
+      res.sendStatus(404);
+    }
+  }catch(err){
+    res.status(500).send(err);
+    console.log(err);
+  }
+});
+
+server.delete("/messages/:idMessage", async(req, res)=>{
+  const id = req.params.idMessage;
+  const user = req.headers.user;
+  try{
+    const messagesCollection = db.collection("messages");
+    const message = await messagesCollection.findOne({_id: new ObjectId(id)});
+    if(message){
+      if(message.from === user){
+        await messagesCollection.deleteOne({_id: new ObjectId(id)});
+        res.sendStatus(200);
+      } else{
+        res.sendStatus(401);
+      }
+    }else{
       res.sendStatus(404);
     }
   }catch(err){
